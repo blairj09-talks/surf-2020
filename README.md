@@ -7,3 +7,6 @@ R packages to work with big data in various formats to arrive at meaningful
 insight using a familiar and consistent set of tools.
 
 [![First Slide](img/first-slide.png)](slides/slides.pdf)
+
+This talk references [this repository](https://github.com/blairj09/arrow-exp) 
+for examples of working with Apache Arrow and R.
