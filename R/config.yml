@@ -1,0 +1,8 @@
+default:
+  driver: "postgresql"
+  host: "surf-big-data.cloiraotshw4.us-east-1.rds.amazonaws.com"
+  user: "postgres"
+  pwd: "sydneysurf"
+  port: 5432
+  database: "postgres"
+  bigint: "integer"

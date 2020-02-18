@@ -1,0 +1,170 @@
+---
+title: "Database Analysis"
+output: html_notebook
+---
+
+```{r setup}
+library(connections)
+library(RSQLite)
+library(dplyr)
+library(dbplyr)
+library(config)
+```
+
+# Databases and `dplyr`
+
+## Intro to `connections`
+*Use `connections` to open open a database connection*
+
+1. Load the `connections` package
+```{r}
+library(connections)
+library(config)
+```
+
+1. Use `connection_open()` to open a Database connection
+```{r}
+con <- connection_open(
+  RPostgres::Postgres(),
+  host =  "surf-big-data.cloiraotshw4.us-east-1.rds.amazonaws.com",
+  user = get("user"),
+  password = get("pwd"),
+  port = 5432,
+  dbname = "retail",
+  bigint = "integer"
+)
+```
+    
+1. The RStudio Connections pane should show the tables in the database
+![Connections Pane](../img/05-conn-pane.png)
+
+## Table reference
+*Use the `dplyr`'s `tbl()` command*
+
+1. Load the `dplyr` package
+```{r}
+library(dplyr)
+```
+
+1. Add `in_schema()` as an argument to `tbl()` to specify the schema
+```{r}
+tbl(con, "customer")
+```
+
+1. Load the results from the `tbl()` command that points the table called **orders** to a variable called `orders` 
+```{r}
+orders <- tbl(con, "orders")
+```
+    
+1. Use the `class` function to determine the object type of `orders`
+```{r}
+class(orders)
+```
+
+## Under the hood 
+*Use `show_query()` to preview the SQL statement that will be sent to the database*
+
+1. Use `show_query()` to preview SQL statement that actually runs when we run `orders` as a command
+```{r}
+show_query(orders)
+```
+    
+1. When executed, `orders` returns the first 1000 rows of the remote **orders** table
+```{r}
+orders
+```
+
+1. Full results of a remote query can be brought into R with `collect`
+```{r}
+local_orders <- collect(orders)
+```
+
+1. Easily view the resulting query by adding `show_query()` in another piped command
+```{r}
+orders %>%
+  show_query()
+```
+
+1. Insert `head()` in between the two statements to see how the SQL changes
+```{r}
+orders %>%
+  head() %>%
+  show_query()
+```
+    
+1. Queries can be assigned to variables. Create a variable called `orders_head` that contains the previous query
+```{r}
+orders_head <- orders %>% 
+  head()
+
+orders_head %>% 
+  show_query()
+```
+
+1. Use `sql_render()` and `simulate_mssql()` to see how the SQL statement changes from vendor to vendor
+```{r}
+orders %>%
+  head() %>%
+  sql_render(con = simulate_mssql()) 
+```
+
+1. Use `explain()` to explore the query plan
+```{r}
+orders %>% 
+  head() %>% 
+  explain()
+```
+    
+## Un-translated R commands
+*Review of how `dbplyr` handles R commands that have not been translated into a like-SQL command*
+
+1. Preview how `mean` is translated
+```{r}
+orders %>% 
+  mutate(avg_id = mean(order_id, na.rm = TRUE)) %>% 
+  show_query()
+```
+
+1. Preview how `Sys.Date()` is translated
+```{r}
+orders %>%
+  mutate(today = Sys.Date()) %>%
+  show_query()
+```
+
+1. Use PostgreSQL native commands, in this case `date`
+```{r}
+orders %>%
+  mutate(today = date('now')) %>%
+  show_query()
+```
+
+1. Run the `dplyr` code to confirm it works
+```{r}
+orders %>%
+  mutate(today = date('now')) %>%
+  head()
+```
+
+## Using bang-bang
+*Intro on passing unevaluated code to a dplyr verb*
+
+1. Preview how `Sys.Date()` is translated when prefixing `!!`
+```{r}
+orders %>%
+  mutate(today = !!Sys.Date()) %>%
+  show_query()
+```
+
+1. View resulting table when `Sys.Date()` is translated when prefixing `!!`
+```{r}
+orders %>%
+  mutate(today = !!Sys.Date()) %>%
+  head()
+```
+
+1. Disconnect from the database using `connection_close`
+```{r}
+connection_close(con)
+```
+
